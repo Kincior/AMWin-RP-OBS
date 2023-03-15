@@ -65,6 +65,12 @@ internal class AppleMusicDiscordClient {
         client?.SetPresence(rp);
 
         Trace.WriteLine($"Set Discord RP to:\n{amInfo}\n");
+        
+        string documentsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string songInfoFolderPath = Path.Combine(documentsDirectory, "SongInfo");
+        string songInfoFilePath = Path.Combine(songInfoFolderPath, "song_info.txt");
+        string songInfo = $"{amInfo.SongName} by {amInfo.SongArtist}\n";
+        File.WriteAllText(songInfoFilePath, songInfo);
     }
     public void Enable() {
         if (enabled) {
