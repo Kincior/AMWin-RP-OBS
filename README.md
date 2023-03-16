@@ -1,6 +1,6 @@
 # AMWin-RP
 A Discord Rich Presence client for Apple Music's native Windows app.  
-Last.FM scrobbling is also supported!
+Last.FM scrobbling is also supported!  
 Now creates a text file with the song's info that you can add to OBS and let your viewers know what you're listening to.
 
 ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/downloads-pre/PKBeam/AMWin-RP/total) ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/downloads-pre/PKBeam/AMWin-RP/latest/total) 
