@@ -1,6 +1,6 @@
 ﻿using System.Windows;
-using System.Windows.Controls;
 using Hardcodet.Wpf.TaskbarNotification;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace AMWin_RichPresence {
     /// <summary>
@@ -9,23 +9,48 @@ namespace AMWin_RichPresence {
     public partial class App : Application {
 
         private TaskbarIcon? taskbarIcon;
-        private AppleMusicScraper amScraper;
+        private AppleMusicClientScraper amScraper;
         private AppleMusicDiscordClient discordClient;
         private AppleMusicScrobbler scrobblerClient;
+        public LastFmCredentials lastFmCredentials {
+            get {
+                var creds = new LastFmCredentials();
+                creds.apiKey = AMWin_RichPresence.Properties.Settings.Default.LastfmAPIKey;
+                creds.apiSecret = AMWin_RichPresence.Properties.Settings.Default.LastfmSecret;
+                creds.username = AMWin_RichPresence.Properties.Settings.Default.LastfmUsername;
+                creds.password = SettingsWindow.GetLastFMPassword();
+                return creds;
+            }
+        }
         public App() {
 
             // start Discord RPC
-            discordClient = new(Constants.DiscordClientID, enabled: false, subtitleOptions: (AppleMusicDiscordClient.RPSubtitleDisplayOptions)AMWin_RichPresence.Properties.Settings.Default.RPSubtitleChoice);
-            scrobblerClient = new AppleMusicScrobbler();
-            scrobblerClient.init();
+            var subtitleOptions = (AppleMusicDiscordClient.RPSubtitleDisplayOptions)AMWin_RichPresence.Properties.Settings.Default.RPSubtitleChoice;
+            discordClient = new(Constants.DiscordClientID, enabled: false, subtitleOptions: subtitleOptions);
 
-            // start scraper
+            // start Last.FM scrobbler
+            scrobblerClient = new AppleMusicScrobbler();
+            scrobblerClient.init(lastFmCredentials);
+
+            // start Apple Music scraper
             amScraper = new(Constants.RefreshPeriod, (newInfo) => {
-                // disable RPC when Apple Music is paused or not open
-                if (newInfo != null && ((AppleMusicInfo)newInfo).HasSong && !((AppleMusicInfo)newInfo).IsPaused) {
-                    discordClient.Enable();
-                    discordClient.SetPresence((AppleMusicInfo)newInfo, AMWin_RichPresence.Properties.Settings.Default.ShowAppleMusicIcon);
-                    scrobblerClient.Scrobbleit((AppleMusicInfo)newInfo, scrobblerClient.GetLastFmScrobbler());
+                
+                // don't update scraper if Apple Music is paused or not open
+                if (newInfo != null && newInfo != null && !newInfo.IsPaused) {
+
+                    // Discord RP update
+                    if (AMWin_RichPresence.Properties.Settings.Default.EnableDiscordRP) {
+                        discordClient.Enable();
+                        discordClient.SetPresence(newInfo, AMWin_RichPresence.Properties.Settings.Default.ShowAppleMusicIcon);
+                    } else {
+                        discordClient.Disable();
+                    }
+
+                    // Last.FM scrobble update
+                    var scrobbler = scrobblerClient.GetLastFmScrobbler();
+                    if (AMWin_RichPresence.Properties.Settings.Default.LastfmEnable && scrobbler != null) {
+                        scrobblerClient.Scrobbleit(newInfo, scrobbler);
+                    }
                 } else {
                     discordClient.Disable();
                 }
@@ -47,7 +72,7 @@ namespace AMWin_RichPresence {
         }
 
         internal void UpdateLastfmCreds(bool showMessageBoxOnSuccess) {
-            scrobblerClient.UpdateCreds(showMessageBoxOnSuccess);
+            scrobblerClient.UpdateCreds(lastFmCredentials, showMessageBoxOnSuccess);
         }
     }
 }

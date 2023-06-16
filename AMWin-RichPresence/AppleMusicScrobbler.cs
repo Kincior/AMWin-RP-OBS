@@ -2,16 +2,20 @@
 using IF.Lastfm.Core.Objects;
 using IF.Lastfm.Core.Scrobblers;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using System.Windows;
 
 namespace AMWin_RichPresence
 {
+    public struct LastFmCredentials {
+        public string apiKey;
+        public string apiSecret;
+        public string username;
+        public string password;
+    }
     internal class AppleMusicScrobbler
     {
 
@@ -22,17 +26,22 @@ namespace AMWin_RichPresence
         private string? lastSongID;
         private bool hasScrobbled;
 
+        private string CleanAlbumName(string songName) {
+            // Remove " - Single" and " - EP"
+            var re = new Regex(@"\s-\s((Single)|(EP))$");
+            return re.Replace(songName, new MatchEvaluator((m) => { return ""; }));
+        }
 
-        public async void init(bool showMessageBoxOnSuccess = false)
+        public async void init(LastFmCredentials credentials, bool showMessageBoxOnSuccess = false)
         {
-            if (!String.IsNullOrEmpty(AMWin_RichPresence.Properties.Settings.Default.LastfmAPIKey) 
-                && !String.IsNullOrEmpty(AMWin_RichPresence.Properties.Settings.Default.LastfmSecret)
-                && !String.IsNullOrEmpty(AMWin_RichPresence.Properties.Settings.Default.LastfmUsername))
+            if (!String.IsNullOrEmpty(credentials.apiKey) 
+                && !String.IsNullOrEmpty(credentials.apiSecret)
+                && !String.IsNullOrEmpty(credentials.username))
             {
                 // Use the four pieces of information (API Key, API Secret, Username, Password) to log into Last.FM for Scrobbling
                 httpClient = new HttpClient();
-                lastfmAuth = new LastAuth(AMWin_RichPresence.Properties.Settings.Default.LastfmAPIKey, AMWin_RichPresence.Properties.Settings.Default.LastfmSecret);
-                await lastfmAuth.GetSessionTokenAsync(AMWin_RichPresence.Properties.Settings.Default.LastfmUsername, SettingsWindow.GetLastFMPassword());
+                lastfmAuth = new LastAuth(credentials.apiKey, credentials.apiSecret);
+                await lastfmAuth.GetSessionTokenAsync(credentials.username, credentials.password);
 
                 if (lastfmAuth.Authenticated) {
                     if (showMessageBoxOnSuccess) {
@@ -51,16 +60,16 @@ namespace AMWin_RichPresence
             return lastFmScrobbler;
         }
 
-        public void UpdateCreds(bool showMessageBoxOnSuccess)
+        public void UpdateCreds(LastFmCredentials credentials, bool showMessageBoxOnSuccess)
         {
             httpClient = null;
             lastfmAuth = null;
             lastFmScrobbler = null;
-            init(showMessageBoxOnSuccess);
+            init(credentials, showMessageBoxOnSuccess);
         }
 
 
-        public async void Scrobbleit(AppleMusicInfo info, IScrobbler? lastFmScrobbler)
+        public async void Scrobbleit(AppleMusicInfo info, IScrobbler lastFmScrobbler)
         {
             // This gets called every five seconds (Constants.RefreshPeriod) when a song is playing. There are some rules before we want to scrobble.
             // First, when the song changes, start start "our" timer over at 0.  Every time this gets called, increment by five seconds (RefreshPeriod).
@@ -90,7 +99,11 @@ namespace AMWin_RichPresence
                         if (lastfmAuth != null && lastfmAuth.Authenticated)
                         {
                             Trace.WriteLine(string.Format("{0} LastFM Scrobbler - Scrobbling: {1}", DateTime.UtcNow.ToString(), lastSongID));
-                            var scrobble = new Scrobble(info.SongArtist, info.SongAlbum, info.SongName, DateTime.UtcNow);
+                            var scrobble = new Scrobble(
+                                Properties.Settings.Default.LastfmScrobblePrimaryArtist ? AppleMusicWebScraper.GetArtistList(info.SongName, info.SongAlbum, info.SongArtist).First() : info.SongArtist,
+                                Properties.Settings.Default.LastfmCleanAlbumName ? CleanAlbumName(info.SongAlbum) : info.SongAlbum, 
+                                info.SongName, 
+                                DateTime.UtcNow);
                             var response = await lastFmScrobbler.ScrobbleAsync(scrobble);
                         }
                         hasScrobbled = true;

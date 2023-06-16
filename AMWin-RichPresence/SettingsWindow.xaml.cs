@@ -29,6 +29,9 @@ namespace AMWin_RichPresence {
 
             SaveSettings();
         }
+        private void CheckBox_EnableDiscordRP_Click(object sender, RoutedEventArgs e) {
+            SaveSettings();
+        }
 
         private void CheckBox_ShowAppleMusicIcon_Click(object sender, RoutedEventArgs e) {
             SaveSettings();
@@ -38,6 +41,17 @@ namespace AMWin_RichPresence {
             var newOption = AppleMusicDiscordClient.SubtitleOptionFromIndex(ComboBox_RPSubtitleChoice.SelectedIndex);
             ((App)Application.Current).UpdateRPSubtitleDisplay(newOption);
 
+            SaveSettings();
+        }
+
+        private void CheckBox_LastfmEnable_Click(object sender, RoutedEventArgs e) {
+            SaveSettings();
+        }
+        private void CheckBox_LastfmCleanAlbumName_Click(object sender, RoutedEventArgs e) {
+            SaveSettings();
+        }
+
+        private void CheckBox_LastfmScrobblePrimary_Click(object sender, RoutedEventArgs e) {
             SaveSettings();
         }
 
@@ -94,6 +108,7 @@ namespace AMWin_RichPresence {
 
             // Signals the LastFM Scrobbler to re-init with new credentials
             ((App)Application.Current).UpdateLastfmCreds(showMessageBoxOnSuccess: true);
+
            // Close();
         }
 
